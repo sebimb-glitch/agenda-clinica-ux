@@ -1,8 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 
-// Firestore debe tener reglas públicas si no querés login:
-// rules_version = '2'; service cloud.firestore { match /databases/{database}/documents { match /{document=**} { allow read, write: if true; } } }
 const firebaseConfig = {
   apiKey: "AIzaSyBjBiFKjZU04oocDXiNPFmBIn1HD4Ku4c4",
   authDomain: "agenda-consultorio-3db0e.firebaseapp.com",

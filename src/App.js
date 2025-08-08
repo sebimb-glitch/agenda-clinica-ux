@@ -19,7 +19,6 @@ import AddTurnoModal from "./AddTurnoModal";
 moment.locale("es");
 const localizer = momentLocalizer(moment);
 
-// Uruguay holidays 2025
 const FERIADOS_UY_2025 = [
   "2025-01-01",
   "2025-03-03","2025-03-04",
@@ -52,7 +51,7 @@ const mensajesES = {
 
 function tituloPorDia(date) {
   const d = moment(date);
-  const dia = d.day(); // 0 dom, 1 lun, 2 mar, 3 mié, 4 jue, 5 vie
+  const dia = d.day();
   const semana = Math.ceil(d.date() / 7);
   if (dia === 1) return "Pie diabético";
   if (dia === 2) return "Agenda extra";
@@ -60,8 +59,8 @@ function tituloPorDia(date) {
   if (dia === 4) return "Diabetes tipo 2";
   if (dia === 5) {
     if (semana === 1) return "Bariátrica (10 cupos)";
-    if (semana === 2 || semana === 3) return "Nati / Seba / Tami / Cris (5 c/u)";
     if (semana === 4) return "Reunión de equipo (no hay consulta)";
+    return "Nati / Seba / Tami / Cris (5 c/u)";
   }
   return null;
 }
@@ -75,12 +74,12 @@ function esDiaBloqueado(date) {
   const d = moment(date);
   const dia = d.day();
   const semana = Math.ceil(d.date() / 7);
-  if (esFeriadoUY(date)) return true; // feriados
-  if (dia === 5 && semana === 4) return true; // 4º viernes reunión
+  if (dia === 0 || dia === 6) return true; // Dom y Sáb
+  if (esFeriadoUY(date)) return true;
+  if (dia === 5 && semana === 4) return true;
   return false;
 }
 
-// 08:30–12:00
 function minHora(date) { const d = new Date(date); d.setHours(8,30,0,0); return d; }
 function maxHora(date) { const d = new Date(date); d.setHours(12,0,0,0); return d; }
 
@@ -88,10 +87,10 @@ function capacidadPorDia(date) {
   const d = moment(date);
   const dia = d.day();
   const semana = Math.ceil(d.date() / 7);
-  if (dia === 1) return { tipo: "dia", limite: 10 };                 // lunes 10
-  if (dia === 4) return { tipo: "dia", limite: 15 };                 // jueves 15
-  if (dia === 5 && semana === 1) return { tipo: "dia", limite: 10 }; // 1er viernes 10
-  if (dia === 5 && (semana === 2 || semana === 3)) return { tipo: "profesional", limite: 5 }; // 2º/3º viernes
+  if (dia === 1) return { tipo: "dia", limite: 10 };
+  if (dia === 4) return { tipo: "dia", limite: 15 };
+  if (dia === 5 && semana === 1) return { tipo: "dia", limite: 10 };
+  if (dia === 5 && semana !== 1 && semana !== 4) return { tipo: "profesional", limite: 5 };
   return { tipo: "sin_tope", limite: Infinity };
 }
 
@@ -108,14 +107,16 @@ export default function App() {
     const unsub = onSnapshot(q, (snapshot) => {
       const evs = snapshot.docs.map((docu) => {
         const data = docu.data();
+        const numero = data.numero ? `${data.numero}. ` : "";
         const etiquetaProfesional = data.profesional ? ` | ${data.profesional}` : "";
         return {
           id: docu.id,
-          title: `${data.nombre} | CI: ${data.ci} | Tel: ${data.telefono}${etiquetaProfesional}` + (data.notas ? ` — ${data.notas}` : ""),
+          title: `${numero}${data.nombre} | CI: ${data.ci} | Tel: ${data.telefono}${etiquetaProfesional}` + (data.notas ? ` — ${data.notas}` : ""),
           start: data.inicio.toDate(),
           end: data.fin.toDate(),
           notas: data.notas || "",
           profesional: data.profesional || null,
+          numero: data.numero || null,
         };
       });
       setEventos(evs);
@@ -125,7 +126,7 @@ export default function App() {
 
   const abrirModal = (slot) => {
     if (esDiaBloqueado(slot.start)) {
-      alert("Este día está bloqueado (feriado o reunión).");
+      alert("Este día está bloqueado (fin de semana, feriado o reunión).");
       return;
     }
     const inicio = moment(slot.start);
@@ -144,27 +145,29 @@ export default function App() {
     setSlotInfo(null);
   };
 
-  const { esDividido, restantesDia, restantesPorProfesional } = useMemo(() => {
-    if (!slotInfo) return { esDividido: false, restantesDia: 0, restantesPorProfesional: {} };
+  const { esDividido, restantesDia, restantesPorProfesional, siguienteNumero } = useMemo(() => {
+    if (!slotInfo) return { esDividido:false, restantesDia:0, restantesPorProfesional:{}, siguienteNumero:1 };
     const inicio = moment(slotInfo.start);
     const { tipo, limite } = capacidadPorDia(inicio.toDate());
     const delDia = eventos.filter(ev => moment(ev.start).isSame(inicio, "day"));
+    const sig = delDia.length + 1;
     if (tipo === "dia") {
-      return { esDividido: false, restantesDia: Math.max(0, limite - delDia.length), restantesPorProfesional: {} };
+      return { esDividido:false, restantesDia:Math.max(0, limite - delDia.length), restantesPorProfesional:{}, siguienteNumero:sig };
     }
     if (tipo === "profesional") {
       const counts = {};
       PROFESIONALES_VIERNES.forEach(p => counts[p] = delDia.filter(ev => (ev.profesional || "") === p).length);
       const rest = {};
       PROFESIONALES_VIERNES.forEach(p => rest[p] = Math.max(0, limite - (counts[p] || 0)));
-      return { esDividido: true, restantesDia: 0, restantesPorProfesional: rest };
+      return { esDividido:true, restantesDia:0, restantesPorProfesional:rest, siguienteNumero:sig };
     }
-    return { esDividido: false, restantesDia: Infinity, restantesPorProfesional: {} };
+    return { esDividido:false, restantesDia:Infinity, restantesPorProfesional:{}, siguienteNumero:sig };
   }, [slotInfo, eventos]);
 
   const guardarTurno = async (payload) => {
     if (!slotInfo) return;
     const inicio = moment(slotInfo.start);
+    const fin = moment(slotInfo.end);
     const { tipo, limite } = capacidadPorDia(inicio.toDate());
     const delDia = eventos.filter(ev => moment(ev.start).isSame(inicio, "day"));
 
@@ -186,28 +189,67 @@ export default function App() {
       telefono: payload.telefono,
       notas: payload.notas,
       inicio: Timestamp.fromDate(new Date(inicio)),
-      fin: Timestamp.fromDate(new Date(slotInfo.end)),
+      fin: Timestamp.fromDate(new Date(fin)),
       profesional: payload.profesional || null,
+      numero: siguienteNumero,
     });
     cerrarModal();
-    // Confirm visual
-    setTimeout(() => alert("Turno guardado ✅"), 10);
+    setTimeout(() => alert(`Turno #${siguienteNumero} guardado ✅`), 10);
   };
 
-  const borrarEvento = async (evento) => {
-    if (!window.confirm(`¿Cancelar/borrar el turno de ${evento.title}?`)) return;
-    const eventoDoc = doc(db, "turnos", evento.id);
-    await deleteDoc(eventoDoc);
+  const imprimirTicket = (evento) => {
+    const w = window.open("", "_blank", "width=480,height=640");
+    const fecha = moment(evento.start).format("dddd DD/MM/YYYY HH:mm");
+    const html = `
+      <html><head><title>Ticket de turno</title>
+      <style>
+        body{font-family:Inter,Arial,sans-serif;padding:16px}
+        .card{border:1px solid #e5e7eb;border-radius:12px;padding:16px}
+        h2{margin:0 0 12px 0}
+        .row{margin:6px 0}
+        .muted{color:#6b7280;font-size:13px}
+      </style>
+      </head><body>
+        <div class="card">
+          <h2>Ticket de turno</h2>
+          <div class="row"><strong>N°:</strong> ${evento.numero || "-"}</div>
+          <div class="row"><strong>Paciente:</strong> ${evento.title.replace(/^\d+\.\s*/,'').split(' | CI:')[0]}</div>
+          <div class="row"><strong>CI:</strong> ${/CI:\s([^|]+)/.exec(evento.title)?.[1] || ""}</div>
+          <div class="row"><strong>Tel:</strong> ${/Tel:\s([^—]+)/.exec(evento.title)?.[1] || ""}</div>
+          <div class="row"><strong>Fecha:</strong> ${fecha}</div>
+          ${evento.profesional ? `<div class="row"><strong>Profesional:</strong> ${evento.profesional}</div>` : ""}
+          ${evento.notas ? `<div class="row"><strong>Notas:</strong> ${evento.notas}</div>` : ""}
+          <div class="row muted">Presentar este ticket al llegar al consultorio.</div>
+        </div>
+        <script>window.print();</script>
+      </body></html>`;
+    w.document.write(html);
+    w.document.close();
   };
 
-  // Custom day header to show chip/title
+  const onSelectEvent = async (evento) => {
+    const opcion = window.prompt("Escribí: IMPRIMIR para ticket, BORRAR para cancelar.", "IMPRIMIR");
+    if (!opcion) return;
+    const op = opcion.trim().toLowerCase();
+    if (op.startsWith("impri")) {
+      imprimirTicket(evento);
+      return;
+    }
+    if (op.startsWith("borra")) {
+      if (!window.confirm(\`¿Cancelar/borrar el turno de \${evento.title}?\`)) return;
+      const eventoDoc = doc(db, "turnos", evento.id);
+      await deleteDoc(eventoDoc);
+    }
+  };
+
   const DayHeader = ({ label, date }) => {
     const t = tituloPorDia(date);
+    const esFeriado = esFeriadoUY(date);
     return (
       <div style={{ display:"flex", alignItems:"center", gap:8 }}>
         <strong>{label}</strong>
         {t ? <span className="daychip">{t}</span> : null}
-        {esFeriadoUY(date) ? <span className="daychip" style={{ background:"#fee2e2", color:"#991b1b" }}>Feriado</span> : null}
+        {esFeriado ? <span className="daychip" style={{ background:"#fee2e2", color:"#991b1b" }}>Feriado</span> : null}
       </div>
     );
   };
@@ -217,7 +259,7 @@ export default function App() {
       <div className="topbar">
         <div className="app-title">
           <span>📅 Agenda del consultorio</span>
-          <span className="app-pill">08:30–12:00</span>
+          <span className="app-pill">08:30–12:00 · 15'</span>
         </div>
         <a className="btn ghost" href="#" onClick={(e)=>{e.preventDefault(); window.location.reload();}}>Actualizar</a>
       </div>
@@ -236,7 +278,7 @@ export default function App() {
           max={maxHora(new Date())}
           messages={mensajesES}
           onSelectSlot={abrirModal}
-          onSelectEvent={borrarEvento}
+          onSelectEvent={onSelectEvent}
           components={{ dayHeader: DayHeader, event: ({ event }) => (
             <div className="event" title={event.notas ? `Notas: ${event.notas}` : ""}>{event.title}</div>
           )}}
@@ -244,22 +286,17 @@ export default function App() {
             const d = moment(date);
             const dia = d.day();
             const semana = Math.ceil(d.date()/7);
-            let backgroundColor = "white";
-            if (esFeriadoUY(date)) backgroundColor = "#ffe6e6";
+            let backgroundColor = "#ffffff";
+            if (esDiaBloqueado(date)) backgroundColor = "#f1f5f9";
             else {
-              if (dia === 1) backgroundColor = "#ecfdf5"; // light green
-              if (dia === 3) backgroundColor = "#fffbeb"; // light yellow
-              if (dia === 4) backgroundColor = "#eff6ff"; // light blue
-              if (dia === 5 && semana === 1) backgroundColor = "#fff7ed"; // 1st fri
-              if (dia === 5 && (semana === 2 || semana === 3)) backgroundColor = "#f0f9ff"; // 2nd/3rd fri
-              if (dia === 5 && semana === 4) backgroundColor = "#fee2e2"; // 4th fri
+              if (dia === 1) backgroundColor = "#ecfdf5";
+              if (dia === 3) backgroundColor = "#fffbeb";
+              if (dia === 4) backgroundColor = "#eff6ff";
+              if (dia === 5 && semana === 1) backgroundColor = "#fff7ed";
+              if (dia === 5 && semana !== 1 && semana !== 4) backgroundColor = "#f0f9ff";
+              if (dia === 5 && semana === 4) backgroundColor = "#fee2e2";
             }
-            return {
-              style: {
-                backgroundColor,
-                opacity: esDiaBloqueado(date) ? 0.6 : 1,
-              },
-            };
+            return { style: { backgroundColor } };
           }}
           style={{ height: "88vh", background:"#fff", borderRadius:12, boxShadow:"0 6px 24px rgba(2,6,23,.06)" }}
         />
@@ -274,7 +311,7 @@ export default function App() {
           if(!slotInfo) return false;
           const d = moment(slotInfo.start);
           const dia = d.day(); const semana = Math.ceil(d.date()/7);
-          return dia === 5 && (semana === 2 || semana === 3);
+          return dia === 5 && semana !== 1 && semana !== 4;
         })()}
         restantesDia={(function(){
           if(!slotInfo) return 0;

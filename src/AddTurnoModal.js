@@ -10,11 +10,8 @@ export default function AddTurnoModal({ open, onClose, onSave, slotInfo, esDivid
   const [notas, setNotas] = useState("");
   const [profesional, setProfesional] = useState("");
 
-  // Reset fields whenever the modal opens/closes
   useEffect(() => {
-    if (open) {
-      setNombre(""); setCi(""); setTelefono(""); setNotas(""); setProfesional("");
-    }
+    if (open) { setNombre(""); setCi(""); setTelefono(""); setNotas(""); setProfesional(""); }
   }, [open]);
 
   const fechaTexto = useMemo(() => {
@@ -38,7 +35,6 @@ export default function AddTurnoModal({ open, onClose, onSave, slotInfo, esDivid
       notas: (notas || "").trim(),
       profesional: esDividido ? profesional : null,
     });
-    // fields are reset by effect when modal closes
   };
 
   if (!open) return null;
@@ -61,16 +57,16 @@ export default function AddTurnoModal({ open, onClose, onSave, slotInfo, esDivid
         <div style={{ marginTop: 10 }}>
           <input className="input" placeholder="Nombre y apellido" value={nombre} onChange={e => setNombre(e.target.value)} />
         </div>
-        <div className="grid">
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginTop:10 }}>
           <input className="input" placeholder="Cédula de identidad" value={ci} onChange={e => setCi(e.target.value)} />
           <input className="input" placeholder="Teléfono" value={telefono} onChange={e => setTelefono(e.target.value)} />
         </div>
-        <div style={{ marginTop: 8 }}>
+        <div style={{ marginTop: 10 }}>
           <textarea className="textarea" placeholder="Notas (opcional)" value={notas} onChange={e => setNotas(e.target.value)} />
         </div>
 
         {esDividido && (
-          <div style={{ marginTop: 8 }}>
+          <div style={{ marginTop: 10 }}>
             <select className="select" value={profesional} onChange={e => setProfesional(e.target.value)}>
               <option value="">Elegir profesional</option>
               {PROFESIONALES_VIERNES.map(p => (
@@ -80,9 +76,9 @@ export default function AddTurnoModal({ open, onClose, onSave, slotInfo, esDivid
           </div>
         )}
 
-        <div className="modal-actions">
-          <button className="btn ghost" onClick={onClose}>Cancelar</button>
-          <button className="btn primary" onClick={handleSave} disabled={!puedeGuardar()}>Guardar turno</button>
+        <div className="modal-actions" style={{ display:"flex", gap:10, justifyContent:"flex-end", marginTop:12 }}>
+          <button className="btn" onClick={onClose}>Cancelar</button>
+          <button className="btn" style={{ background:"#2563eb", color:"#fff", borderColor:"#2563eb" }} onClick={handleSave} disabled={!puedeGuardar()}>Guardar turno</button>
         </div>
       </div>
     </div>
