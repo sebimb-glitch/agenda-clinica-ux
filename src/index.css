@@ -1,0 +1,51 @@
+:root{
+  --brand:#2563eb;
+  --brand-600:#1d4ed8;
+  --bg:#f8fafc;
+  --card:#ffffff;
+  --text:#0f172a;
+  --muted:#64748b;
+  --ok:#10b981;
+  --warn:#f59e0b;
+  --danger:#ef4444;
+}
+*{ box-sizing:border-box; }
+html,body,#root{ height:100%; }
+body{ margin:0; font-family:"Inter","Nunito",system-ui,-apple-system,"Segoe UI",Roboto,Arial; background:var(--bg); color:var(--text); }
+.container{ padding:16px; }
+.topbar{
+  position:sticky; top:0; z-index:10;
+  display:flex; justify-content:space-between; align-items:center;
+  padding:10px 16px; background:var(--card); border-bottom:1px solid #e5e7eb;
+  box-shadow: 0 2px 8px rgba(15,23,42,.04);
+}
+.app-title{ display:flex; align-items:center; gap:10px; font-weight:700; }
+.app-pill{ font-size:12px; color:#1e293b; background:#e2e8f0; padding:2px 8px; border-radius:999px; }
+.badge{ display:inline-block; padding:2px 8px; border-radius:9999px; background:#e5f3ff; color:#1e40af; font-size:12px; margin-left:8px; }
+.btn{ appearance:none; cursor:pointer; border:1px solid #d1d5db; background:#fff; color:#111827; border-radius:10px; padding:8px 12px; }
+.btn.primary{ background:var(--brand); color:#fff; border-color:var(--brand); }
+.btn.primary:hover{ background:var(--brand-600); }
+.btn.ghost{ background:transparent; border-color:transparent; color:var(--muted); }
+.event{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.note{ font-size:12px; color:#334155; }
+
+/* Modal */
+.modal-backdrop{ position:fixed; inset:0; background:rgba(2,6,23,.45); display:flex; align-items:center; justify-content:center; padding:12px; }
+.modal{
+  width:100%; max-width:560px; background:var(--card); border-radius:16px;
+  box-shadow:0 20px 60px rgba(2,6,23,.25); padding:18px;
+}
+.modal h3{ margin:0 0 8px 0; font-weight:700; }
+.helper{ font-size:13px; color:var(--muted); margin-bottom:6px; }
+.grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.input,.select,.textarea{
+  width:100%; padding:12px; border:1px solid #e2e8f0; border-radius:10px; background:#f8fafc;
+}
+.input:focus,.select:focus,.textarea:focus{ outline:none; border-color:var(--brand); background:#fff; box-shadow:0 0 0 3px rgba(37,99,235,.12); }
+.textarea{ min-height:88px; resize:vertical; }
+.modal-actions{ display:flex; gap:10px; justify-content:flex-end; margin-top:12px; }
+.capacity{ font-size:12px; background:#f1f5f9; border-radius:10px; padding:8px; margin:8px 0; color:#0f172a; }
+
+/* Day header chip */
+.daychip{ display:inline-block; font-size:12px; background:#e2e8f0; color:#0f172a; padding:2px 8px; border-radius:999px; margin-left:6px; }
+.rbc-toolbar{ font-family:"Inter"; }
